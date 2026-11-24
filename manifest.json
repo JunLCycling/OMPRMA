@@ -2,7 +2,7 @@
   "name": "場地自行車計分紀錄",
   "short_name": "場地計分",
   "description": "場地自行車領先計分賽、全能領先計分與美式接力即時記分工具",
-  "start_url": "./",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
