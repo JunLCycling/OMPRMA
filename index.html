@@ -90,7 +90,7 @@
       max-width: 500px;
       display: flex;
       flex-direction: column;
-      gap: 28px;
+      gap: 24px;
       align-items: center;
     }
 
@@ -153,18 +153,54 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 10px;
-      padding: calc(12px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 12px calc(16px + env(safe-area-inset-left));
+      gap: 8px;
+      padding: calc(12px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) 12px calc(14px + env(safe-area-inset-left));
       background: var(--surface);
       border-bottom: 1.5px solid #e2e8f0;
     }
 
+    .header-left-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      flex: 1;
+    }
+
     .top-header-title {
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       font-weight: 700;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+
+    .sprint-counter-badge {
+      flex-shrink: 0;
+      font-size: 0.92rem;
+      font-weight: 800;
+      padding: 5px 12px;
+      border-radius: 999px;
+      background: #e2e8f0;
+      color: #475569;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    .sprint-counter-badge.has-sprints {
+      background: #0f766e;
+      color: #ffffff;
+    }
+
+    .sprint-counter-badge.flash-sprint {
+      animation: sprintPop 0.55s ease;
+    }
+
+    @keyframes sprintPop {
+      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(15, 118, 110, 0.5); }
+      35% { transform: scale(1.12); box-shadow: 0 0 0 6px rgba(15, 118, 110, 0.25); }
+      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(15, 118, 110, 0); }
     }
 
     .btn-ghost {
@@ -172,11 +208,12 @@
       background: var(--surface);
       color: var(--ink);
       border-radius: 12px;
-      padding: 8px 14px;
-      font-size: 0.95rem;
+      padding: 7px 12px;
+      font-size: 0.9rem;
       font-weight: 600;
       cursor: pointer;
       white-space: nowrap;
+      flex-shrink: 0;
     }
 
     .btn-ghost:active {
@@ -529,7 +566,7 @@
     /* ================= 橫式與平板響應式調整 ================= */
     @media (orientation: landscape) and (min-width: 640px) {
       .setup-container {
-        gap: 20px;
+        gap: 18px;
       }
 
       .setup-box {
@@ -700,6 +737,7 @@
       </div>
 
       <button type="button" id="btn-p1-confirm" class="btn-confirm-main">確認</button>
+      <div id="sw-status" style="font-size: 0.85rem; color: #64748b;">離線快取檢查中...</div>
     </div>
   </section>
 
@@ -723,8 +761,11 @@
   <!-- ================= 第三頁面：即時記分板 ================= -->
   <section id="page-3" class="page" aria-label="即時記分板">
     <header class="top-header">
-      <div id="p3-title" class="top-header-title"></div>
-      <div style="display: flex; gap: 8px;">
+      <div class="header-left-group">
+        <div id="p3-title" class="top-header-title"></div>
+        <span id="sprint-counter" class="sprint-counter-badge">第 0 次衝刺</span>
+      </div>
+      <div style="display: flex; gap: 6px; flex-shrink: 0;">
         <button type="button" id="btn-clear-pending" class="btn-ghost" style="display: none;">清除預選</button>
         <button type="button" id="btn-reset-race" class="btn-ghost">新賽局</button>
       </div>
@@ -790,9 +831,10 @@
         page: 1,
         eventType: '領先計分(單項)',
         count: 12,
-        draftRows: [], // [{ bib: '', score: '' }]
-        riders: [],    // [{ id: 1, bib: '2', score: 102 }]
-        history: [],   // 每次確認前的 riders 深拷貝快照
+        draftRows: [],  // [{ bib: '', score: '' }]
+        riders: [],     // [{ id: 1, bib: '2', score: 102 }]
+        sprintCount: 0, // 已確認的衝刺次數（僅衝刺得分會累加）
+        history: [],    // 每次確認前的快照 { riders, sprintCount }
         doubleFinal: false
       };
 
@@ -818,6 +860,7 @@
       const btnP2Confirm = document.getElementById('btn-p2-confirm');
 
       const p3Title = document.getElementById('p3-title');
+      const sprintCounterEl = document.getElementById('sprint-counter');
       const btnClearPending = document.getElementById('btn-clear-pending');
       const btnResetRace = document.getElementById('btn-reset-race');
       const statusPending = document.getElementById('status-pending');
@@ -860,6 +903,9 @@
           const parsed = JSON.parse(raw);
           if (parsed && typeof parsed === 'object') {
             state = { ...state, ...parsed };
+            if (typeof state.sprintCount !== 'number') {
+              state.sprintCount = 0;
+            }
           }
         } catch (e) {
           // 解析失敗時使用預設狀態
@@ -891,7 +937,6 @@
         rosterList.classList.toggle('multi-col', state.count > 8);
         rosterList.innerHTML = '';
 
-        // 保留先前輸入的草稿內容
         while (state.draftRows.length < state.count) {
           state.draftRows.push({ bib: '', score: '' });
         }
@@ -1021,17 +1066,14 @@
             tapTracker = { id: null, count: 0, time: 0 };
           }
         } else {
-          // 新的點擊序列
           const inSprint = pendingSprints.includes(riderId);
           const hasLap = Object.prototype.hasOwnProperty.call(pendingLaps, riderId);
 
           if (inSprint || hasLap) {
-            // 已選取的格子再點一次：立即取消（若緊接著再點，仍可進入雙擊/三擊）
             pendingSprints = pendingSprints.filter(id => id !== riderId);
             delete pendingLaps[riderId];
             tapTracker = { id: riderId, count: 1, time: now };
           } else {
-            // 未選取的格子單擊：若衝刺名額未滿 4 位則加入（綠色）
             if (pendingSprints.length < 4) {
               pendingSprints.push(riderId);
             }
@@ -1042,9 +1084,18 @@
         renderPage3();
       }
 
-      function renderPage3(updatedIds = new Set()) {
+      function renderPage3(updatedIds = new Set(), sprintJustIncremented = false) {
         p3Title.textContent = state.eventType;
         state.riders.sort(compareRiders);
+
+        // 更新衝刺次數標示
+        sprintCounterEl.textContent = `第 ${state.sprintCount} 次衝刺`;
+        sprintCounterEl.classList.toggle('has-sprints', state.sprintCount > 0);
+        if (sprintJustIncremented) {
+          sprintCounterEl.classList.remove('flash-sprint');
+          void sprintCounterEl.offsetWidth;
+          sprintCounterEl.classList.add('flash-sprint');
+        }
 
         const sprintPts = getSprintPointsTable();
         const lapCount = Object.keys(pendingLaps).length;
@@ -1149,7 +1200,7 @@
 
       function generateResultsImage() {
         const sorted = [...state.riders].sort(compareRiders);
-        const scale = 2; // 高解析度 Retina 輸出
+        const scale = 2;
         const width = 620;
         const padX = 28;
         const padY = 28;
@@ -1164,7 +1215,6 @@
         const ctx = canvas.getContext('2d');
         ctx.scale(scale, scale);
 
-        // 純白背景
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, width, totalH);
 
@@ -1175,7 +1225,6 @@
         sorted.forEach((rider, i) => {
           const y = padY + i * (rowH + gap);
 
-          // 繪製圓角外框格子（與第三頁面相同風格）
           drawRoundedRect(ctx, cardX, y, cardW, rowH, 26);
           ctx.fillStyle = '#ffffff';
           ctx.fill();
@@ -1183,21 +1232,17 @@
           ctx.strokeStyle = '#0f172a';
           ctx.stroke();
 
-          // 繪製「號碼 : 分數」
           const centerY = y + rowH / 2 + 1;
           ctx.fillStyle = '#0f172a';
           ctx.font = `800 32px ${fontStack}`;
           ctx.textBaseline = 'middle';
 
-          // 號碼（靠右對齊於冒號左側）
           ctx.textAlign = 'right';
           ctx.fillText(String(rider.bib), cardX + 165, centerY);
 
-          // 冒號
           ctx.textAlign = 'center';
           ctx.fillText(':', cardX + 195, centerY - 2);
 
-          // 分數（靠左對齊於冒號右側）
           ctx.textAlign = 'left';
           ctx.fillText(String(rider.score), cardX + 230, centerY);
         });
@@ -1270,6 +1315,7 @@
         }
 
         state.riders = riders;
+        state.sprintCount = 0;
         state.history = [];
         state.doubleFinal = false;
         clearAllPending();
@@ -1285,6 +1331,7 @@
         if (confirm('確定要結束目前賽局並返回第一頁重新設定嗎？')) {
           clearAllPending();
           state.riders = [];
+          state.sprintCount = 0;
           state.history = [];
           state.doubleFinal = false;
           showPage(1);
@@ -1299,8 +1346,13 @@
 
       btnUndo.addEventListener('click', () => {
         if (state.history.length === 0) return;
-        const prevRiders = state.history.pop();
-        state.riders = prevRiders;
+        const snapshot = state.history.pop();
+        if (Array.isArray(snapshot)) {
+          state.riders = snapshot;
+        } else if (snapshot) {
+          state.riders = snapshot.riders;
+          state.sprintCount = typeof snapshot.sprintCount === 'number' ? snapshot.sprintCount : state.sprintCount;
+        }
         clearAllPending();
         saveState();
         renderPage3();
@@ -1311,8 +1363,11 @@
         const hasLap = Object.keys(pendingLaps).length > 0;
         if (!hasSprint && !hasLap) return;
 
-        // 儲存確認前快照供「復原上一步」使用
-        state.history.push(state.riders.map(r => ({ ...r })));
+        // 儲存確認前快照（包含分數與衝刺次數）供「復原上一步」使用
+        state.history.push({
+          riders: state.riders.map(r => ({ ...r })),
+          sprintCount: state.sprintCount
+        });
         if (state.history.length > 50) state.history.shift();
 
         const sprintPts = getSprintPointsTable();
@@ -1330,14 +1385,17 @@
           }
         });
 
-        // 若有結算雙倍衝刺分數，結算後自動關閉雙倍開關避免誤加
-        if (hasSprint && state.doubleFinal) {
-          state.doubleFinal = false;
+        // 僅在本次有結算衝刺得分時，才累加衝刺次數
+        if (hasSprint) {
+          state.sprintCount += 1;
+          if (state.doubleFinal) {
+            state.doubleFinal = false;
+          }
         }
 
         clearAllPending();
         saveState();
-        renderPage3(updatedIds);
+        renderPage3(updatedIds, hasSprint);
       });
 
       btnExport.addEventListener('click', generateResultsImage);
@@ -1381,11 +1439,46 @@
       loadState();
       showPage(state.page);
 
-      // 註冊 Service Worker（離線 PWA 支援）
+      // 註冊 Service Worker（離線 PWA 支援與狀態顯示）
+      const swStatusEl = document.getElementById('sw-status');
+      function setSwStatus(text, isReady) {
+        if (!swStatusEl) return;
+        swStatusEl.textContent = text;
+        swStatusEl.style.color = isReady ? '#15803d' : '#64748b';
+      }
+
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('./sw.js').catch(() => {});
+        window.addEventListener('load', async () => {
+          try {
+            const reg = await navigator.serviceWorker.register('./sw.js', { scope: './' });
+
+            const checkReady = async () => {
+              const keys = await caches.keys();
+              const hasCache = keys.some((k) => k.startsWith('track-scorer-'));
+              if (navigator.serviceWorker.controller && hasCache) {
+                setSwStatus('離線模式已就緒 ✓', true);
+              } else if (hasCache) {
+                setSwStatus('快取已下載，重開一次 App 即完成啟用', false);
+              }
+            };
+
+            if (reg.active) await checkReady();
+            navigator.serviceWorker.addEventListener('controllerchange', checkReady);
+            reg.addEventListener('updatefound', () => {
+              const installing = reg.installing;
+              if (!installing) return;
+              installing.addEventListener('statechange', () => {
+                if (installing.state === 'activated') checkReady();
+              });
+            });
+
+            setTimeout(checkReady, 1500);
+          } catch (err) {
+            setSwStatus('離線快取啟用失敗：' + err.message, false);
+          }
         });
+      } else {
+        setSwStatus('此瀏覽器不支援離線快取', false);
       }
     })();
   </script>
