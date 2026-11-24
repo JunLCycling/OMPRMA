@@ -90,7 +90,7 @@
       max-width: 500px;
       display: flex;
       flex-direction: column;
-      gap: 24px;
+      gap: 28px;
       align-items: center;
     }
 
@@ -147,7 +147,7 @@
       background: var(--primary-hover);
     }
 
-    /* ================= Page 2: 號碼（與起始分數）輸入 ================= */
+    /* ================= Page 2: 號碼／名稱（與起始分數）輸入 ================= */
     .top-header {
       flex-shrink: 0;
       display: flex;
@@ -268,7 +268,7 @@
       border: none;
       outline: none;
       background: transparent;
-      font-size: 1.3rem;
+      font-size: 1.25rem;
       font-weight: 700;
       color: var(--ink);
     }
@@ -276,7 +276,7 @@
     .roster-bib-input::placeholder {
       color: #94a3b8;
       font-weight: 500;
-      font-size: 1.05rem;
+      font-size: 1rem;
     }
 
     .roster-score-circle {
@@ -381,8 +381,9 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 10px;
       min-height: 60px;
-      padding: 10px 20px;
+      padding: 10px 18px;
       border: 2.5px solid var(--border);
       border-radius: var(--radius-pill);
       background: var(--surface);
@@ -425,20 +426,23 @@
     }
 
     .rider-main-info {
+      flex: 1;
       display: flex;
       align-items: baseline;
-      gap: 12px;
-      font-size: 1.55rem;
+      gap: 10px;
+      font-size: clamp(1.2rem, 4.2vw, 1.5rem);
       font-weight: 800;
       font-variant-numeric: tabular-nums;
       min-width: 0;
+      overflow: hidden;
     }
 
     .rider-rank-mini {
+      flex-shrink: 0;
       font-size: 0.82rem;
       font-weight: 700;
       color: var(--muted);
-      min-width: 24px;
+      min-width: 22px;
     }
 
     .rider-card.state-sprint .rider-rank-mini,
@@ -449,27 +453,35 @@
     }
 
     .rider-bib {
-      min-width: 56px;
+      min-width: 52px;
+      max-width: 60%;
       text-align: right;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .rider-colon {
+      flex-shrink: 0;
       opacity: 0.75;
     }
 
     .rider-score {
-      min-width: 60px;
+      flex-shrink: 0;
+      min-width: 48px;
       text-align: left;
+      white-space: nowrap;
     }
 
     .rider-badge {
       flex-shrink: 0;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       font-weight: 800;
-      padding: 5px 12px;
+      padding: 5px 11px;
       border-radius: 999px;
       font-variant-numeric: tabular-nums;
       display: none;
+      white-space: nowrap;
     }
 
     .rider-card.state-sprint .rider-badge {
@@ -566,7 +578,7 @@
     /* ================= 橫式與平板響應式調整 ================= */
     @media (orientation: landscape) and (min-width: 640px) {
       .setup-container {
-        gap: 18px;
+        gap: 20px;
       }
 
       .setup-box {
@@ -737,12 +749,11 @@
       </div>
 
       <button type="button" id="btn-p1-confirm" class="btn-confirm-main">確認</button>
-      <div id="sw-status" style="font-size: 0.85rem; color: #64748b;">離線快取檢查中...</div>
     </div>
   </section>
 
-  <!-- ================= 第二頁面：輸入號碼（與起始分數） ================= -->
-  <section id="page-2" class="page" aria-label="輸入選手號碼">
+  <!-- ================= 第二頁面：輸入號碼或名稱（與起始分數） ================= -->
+  <section id="page-2" class="page" aria-label="輸入選手號碼或隊名">
     <header class="top-header">
       <button type="button" id="btn-p2-back" class="btn-ghost">← 返回</button>
       <div id="p2-title" class="top-header-title"></div>
@@ -955,9 +966,9 @@
 
           const bibInput = document.createElement('input');
           bibInput.type = 'text';
-          bibInput.inputMode = 'numeric';
           bibInput.className = 'roster-bib-input';
-          bibInput.placeholder = '輸入號碼';
+          bibInput.placeholder = '輸入號碼或隊名（如 12、台灣）';
+          bibInput.autocomplete = 'off';
           bibInput.value = rowData.bib ?? '';
           bibInput.dataset.index = String(i);
           bibInput.dataset.field = 'bib';
@@ -968,7 +979,7 @@
           });
 
           bibInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
+            if (e.key === 'Enter' && !e.isComposing) {
               e.preventDefault();
               focusNextInput(i, 'bib', isOmnium);
             }
@@ -1221,6 +1232,19 @@
         const cardX = padX;
         const cardW = width - padX * 2;
         const fontStack = '-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif';
+        ctx.font = `800 32px ${fontStack}`;
+
+        // 依實際輸入的號碼或中文字寬度動態決定冒號位置，避免過長文字超出外框
+        let maxBibWidth = 0;
+        sorted.forEach((rider) => {
+          const w = ctx.measureText(String(rider.bib)).width;
+          if (w > maxBibWidth) maxBibWidth = w;
+        });
+        const bibAreaWidth = Math.min(Math.max(Math.ceil(maxBibWidth), 120), 330);
+        const bibRightX = cardX + 32 + bibAreaWidth;
+        const colonX = bibRightX + 24;
+        const scoreLeftX = colonX + 24;
+        const maxScoreWidth = (cardX + cardW - 28) - scoreLeftX;
 
         sorted.forEach((rider, i) => {
           const y = padY + i * (rowH + gap);
@@ -1238,13 +1262,13 @@
           ctx.textBaseline = 'middle';
 
           ctx.textAlign = 'right';
-          ctx.fillText(String(rider.bib), cardX + 165, centerY);
+          ctx.fillText(String(rider.bib), bibRightX, centerY, bibAreaWidth);
 
           ctx.textAlign = 'center';
-          ctx.fillText(':', cardX + 195, centerY - 2);
+          ctx.fillText(':', colonX, centerY - 2);
 
           ctx.textAlign = 'left';
-          ctx.fillText(String(rider.score), cardX + 230, centerY);
+          ctx.fillText(String(rider.score), scoreLeftX, centerY, maxScoreWidth);
         });
 
         const now = new Date();
@@ -1286,13 +1310,13 @@
         for (let i = 0; i < state.count; i++) {
           const rawBib = String(state.draftRows[i]?.bib ?? '').trim();
           if (!rawBib) {
-            alert(`請輸入第 ${i + 1} 列的選手號碼`);
+            alert(`請輸入第 ${i + 1} 列的號碼或隊名`);
             const target = rosterList.querySelector(`input[data-index="${i}"][data-field="bib"]`);
             if (target) target.focus();
             return;
           }
           if (seenBibs.has(rawBib)) {
-            alert(`號碼「${rawBib}」重複輸入，請確認後再試。`);
+            alert(`「${rawBib}」重複輸入，請確認後再試。`);
             return;
           }
           seenBibs.add(rawBib);
@@ -1439,46 +1463,11 @@
       loadState();
       showPage(state.page);
 
-      // 註冊 Service Worker（離線 PWA 支援與狀態顯示）
-      const swStatusEl = document.getElementById('sw-status');
-      function setSwStatus(text, isReady) {
-        if (!swStatusEl) return;
-        swStatusEl.textContent = text;
-        swStatusEl.style.color = isReady ? '#15803d' : '#64748b';
-      }
-
+      // 背景靜默註冊 Service Worker（離線 PWA 支援）
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', async () => {
-          try {
-            const reg = await navigator.serviceWorker.register('./sw.js', { scope: './' });
-
-            const checkReady = async () => {
-              const keys = await caches.keys();
-              const hasCache = keys.some((k) => k.startsWith('track-scorer-'));
-              if (navigator.serviceWorker.controller && hasCache) {
-                setSwStatus('離線模式已就緒 ✓', true);
-              } else if (hasCache) {
-                setSwStatus('快取已下載，重開一次 App 即完成啟用', false);
-              }
-            };
-
-            if (reg.active) await checkReady();
-            navigator.serviceWorker.addEventListener('controllerchange', checkReady);
-            reg.addEventListener('updatefound', () => {
-              const installing = reg.installing;
-              if (!installing) return;
-              installing.addEventListener('statechange', () => {
-                if (installing.state === 'activated') checkReady();
-              });
-            });
-
-            setTimeout(checkReady, 1500);
-          } catch (err) {
-            setSwStatus('離線快取啟用失敗：' + err.message, false);
-          }
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {});
         });
-      } else {
-        setSwStatus('此瀏覽器不支援離線快取', false);
       }
     })();
   </script>
