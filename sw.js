@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tt-live-timing-v1';
+const CACHE_NAME = 'tt-live-timing-v2';
 const ASSETS = [
   './',
   './index.html',
