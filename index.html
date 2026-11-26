@@ -11,7 +11,6 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icon.svg" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
-  <!-- 前端離線/免後端 OCR 套件，用於掃描出發單 -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
   <style>
     :root {
@@ -24,6 +23,8 @@
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
       --danger: #ef4444;
+      --gap-slower: #f87171;
+      --gap-faster: #4ade80;
       --success: #22c55e;
       --radius: 14px;
       --safe-top: env(safe-area-inset-top, 0px);
@@ -148,12 +149,7 @@
     }
 
     /* ===== 第一頁：設定頁 ===== */
-    #page1 .scroll-area {
-      max-width: 600px;
-      width: 100%;
-      margin: 0 auto;
-    }
-
+    #page1 .scroll-area,
     #page1 .footer-bar {
       max-width: 600px;
       width: 100%;
@@ -259,7 +255,7 @@
     }
 
     .p2-container {
-      max-width: 720px;
+      max-width: 760px;
       width: 100%;
       margin: 0 auto;
       display: flex;
@@ -270,7 +266,7 @@
 
     .p2-col-headers {
       display: grid;
-      grid-template-columns: 104px 78px 1fr;
+      grid-template-columns: 94px 66px 1fr 48px;
       gap: 8px;
       padding: 6px 18px;
       font-size: 13px;
@@ -280,7 +276,7 @@
 
     .roster-row {
       display: grid;
-      grid-template-columns: 104px 78px 1fr;
+      grid-template-columns: 94px 66px 1fr 48px;
       gap: 8px;
       align-items: center;
       margin-bottom: 10px;
@@ -292,11 +288,11 @@
       border: 1px solid rgba(245, 158, 11, 0.45);
       border-radius: 10px;
       color: var(--accent-bright);
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 800;
       font-variant-numeric: tabular-nums;
       cursor: pointer;
-      padding: 0 6px;
+      padding: 0 4px;
     }
 
     .roster-noc-input {
@@ -306,8 +302,8 @@
       color: #111827;
       border: none;
       border-radius: 10px;
-      padding: 0 8px;
-      font-size: 15px;
+      padding: 0 6px;
+      font-size: 14px;
       font-weight: 700;
       text-align: center;
       text-transform: uppercase;
@@ -321,10 +317,32 @@
       color: #111827;
       border: none;
       border-radius: 10px;
-      padding: 0 12px;
-      font-size: 16px;
+      padding: 0 10px;
+      font-size: 15px;
       font-weight: 600;
       outline: none;
+    }
+
+    .roster-target-btn {
+      height: 46px;
+      width: 48px;
+      border-radius: 10px;
+      border: 1.5px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-muted);
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.12s ease;
+    }
+
+    .roster-target-btn.selected {
+      background: var(--accent);
+      border-color: var(--accent-bright);
+      color: #111827;
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.45);
     }
 
     /* ===== 第三頁：即時計時主畫面 ===== */
@@ -370,6 +388,7 @@
       min-height: 0;
     }
 
+    /* 預設 5 欄（未指定基準選手） */
     .p3-list-header {
       display: grid;
       grid-template-columns: 34px 1fr 56px 76px 82px;
@@ -382,9 +401,7 @@
       flex-shrink: 0;
     }
 
-    .p3-list-header span:nth-child(3),
-    .p3-list-header span:nth-child(4),
-    .p3-list-header span:nth-child(5) {
+    .p3-list-header span:nth-child(n+3) {
       text-align: right;
     }
 
@@ -409,6 +426,41 @@
       transition: transform 0.08s ease, border-color 0.15s ease, background 0.15s ease;
     }
 
+    /* 有指定基準選手時：7 欄（名次、選手、圈數、單圈、單圈秒差、累計、總秒差） */
+    .p3-list-panel.has-target .p3-list-header {
+      grid-template-columns: 24px 1fr 38px 54px 48px 58px 50px;
+      gap: 4px;
+      padding: 8px 10px 6px;
+      font-size: 11px;
+    }
+
+    .p3-list-panel.has-target .p3-cards {
+      padding: 8px 8px 14px;
+    }
+
+    .p3-list-panel.has-target .athlete-card {
+      grid-template-columns: 24px 1fr 38px 54px 48px 58px 50px;
+      gap: 4px;
+      padding: 10px 6px;
+    }
+
+    .p3-list-panel.has-target .rank-cell {
+      font-size: 16px;
+    }
+
+    .p3-list-panel.has-target .athlete-name {
+      font-size: 14px;
+    }
+
+    .p3-list-panel.has-target .lap-badge {
+      font-size: 11px;
+      padding: 2px 5px;
+    }
+
+    .p3-list-panel.has-target .time-cell {
+      font-size: 13px;
+    }
+
     .athlete-card:active {
       transform: scale(0.985);
     }
@@ -424,6 +476,11 @@
 
     .athlete-card.finished {
       border-color: rgba(34, 197, 94, 0.5);
+    }
+
+    .athlete-card.is-target {
+      background: rgba(245, 158, 11, 0.14);
+      border-color: var(--accent-bright);
     }
 
     .rank-cell {
@@ -490,6 +547,7 @@
       font-weight: 700;
       font-variant-numeric: tabular-nums;
       color: #e2e8f0;
+      white-space: nowrap;
     }
 
     .time-cell.total {
@@ -499,6 +557,28 @@
 
     .time-cell.empty {
       color: var(--text-muted);
+    }
+
+    .time-cell.gap-slower {
+      color: var(--gap-slower);
+    }
+
+    .time-cell.gap-faster {
+      color: var(--gap-faster);
+    }
+
+    .time-cell.gap-base {
+      color: var(--accent-bright);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .col-gap {
+      display: none;
+    }
+
+    .p3-list-panel.has-target .col-gap {
+      display: block;
     }
 
     /* 控制區（待分配佇列 + 紀錄時間鍵） */
@@ -593,7 +673,6 @@
 
     /* ===== 橫式版面適配（手機與平板：紀錄時間鍵置於右下角） ===== */
     @media (orientation: landscape) {
-      /* 第一頁橫式改為雙欄表單，減少捲動 */
       .p1-form-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -617,7 +696,6 @@
         padding: 10px 18px 4px;
       }
 
-      /* 第三頁橫式：左側清單、右側底部為佇列與紀錄時間鍵（右下角） */
       .p3-topbar {
         padding: 6px 16px;
       }
@@ -632,9 +710,9 @@
       }
 
       .p3-control-panel {
-        width: clamp(210px, 28vw, 310px);
+        width: clamp(200px, 26vw, 290px);
         border-top: none;
-        justify-content: flex-end; /* 推至右下角 */
+        justify-content: flex-end;
         padding: 12px 14px 16px;
         background: rgba(19, 22, 30, 0.96);
       }
@@ -645,7 +723,7 @@
       }
     }
 
-    /* 平板大螢幕字體微調 */
+    /* 平板大螢幕字體與欄寬微調 */
     @media (min-width: 768px) {
       .p3-list-header,
       .athlete-card {
@@ -653,6 +731,27 @@
         gap: 10px;
         padding-left: 16px;
         padding-right: 16px;
+      }
+
+      .p3-list-panel.has-target .p3-list-header,
+      .p3-list-panel.has-target .athlete-card {
+        grid-template-columns: 36px 1fr 62px 84px 74px 88px 78px;
+        gap: 8px;
+        padding-left: 14px;
+        padding-right: 14px;
+        font-size: 13px;
+      }
+
+      .p3-list-panel.has-target .athlete-name {
+        font-size: 17px;
+      }
+
+      .p3-list-panel.has-target .time-cell {
+        font-size: 16px;
+      }
+
+      .p3-list-panel.has-target .rank-cell {
+        font-size: 20px;
       }
 
       .athlete-name {
@@ -811,7 +910,6 @@
 
       <div class="scroll-area">
         <div class="p1-form-grid">
-          <!-- 開賽時間 + 掃描按鈕 -->
           <div class="field-group span-2">
             <div class="field-label-row">
               <label class="field-label">開賽時間</label>
@@ -837,7 +935,6 @@
             <div id="scanStatus" class="scan-status"></div>
           </div>
 
-          <!-- 圈數 -->
           <div class="field-group">
             <label for="lapsSelect" class="field-label">圈數</label>
             <div class="select-wrap">
@@ -845,7 +942,6 @@
             </div>
           </div>
 
-          <!-- 間隔時間 -->
           <div class="field-group">
             <label for="intervalSelect" class="field-label">間隔時間</label>
             <div class="select-wrap">
@@ -858,7 +954,6 @@
             </div>
           </div>
 
-          <!-- 人數 -->
           <div class="field-group">
             <label for="countSelect" class="field-label">人數</label>
             <div class="select-wrap">
@@ -866,9 +961,8 @@
             </div>
           </div>
 
-          <!-- 距離（單圈） -->
           <div class="field-group">
-            <label for="distanceInput" class="field-label">單圈距離（公里）</label>
+            <label for="distanceInput" class="field-label">距離（單圈）</label>
             <input
               type="number"
               id="distanceInput"
@@ -894,14 +988,15 @@
       <div class="p2-container">
         <div class="top-nav">
           <button type="button" id="btnBackToPage1" class="btn-ghost">← 返回</button>
-          <span style="font-size:13px;color:var(--text-muted);">點擊時間可微調</span>
+          <span style="font-size:13px;color:var(--text-muted);">點時間可微調 / 點 ★ 指定秒差基準</span>
         </div>
         <h2 class="page-title" style="margin-bottom:8px;">選手出發名單</h2>
 
         <div class="p2-col-headers">
           <span>出發時間</span>
-          <span style="text-align:center;">國家代碼</span>
-          <span>選手姓名（可中英文）</span>
+          <span style="text-align:center;">國家</span>
+          <span>選手姓名（中英文）</span>
+          <span style="text-align:center;">基準</span>
         </div>
 
         <div id="rosterList" class="scroll-area" style="padding-top:4px;"></div>
@@ -927,19 +1022,19 @@
       </header>
 
       <div class="p3-body">
-        <!-- 選手列表 -->
-        <div class="p3-list-panel">
+        <div id="p3ListPanel" class="p3-list-panel">
           <div class="p3-list-header">
             <span style="text-align:center;">名次</span>
             <span>選手</span>
             <span>圈數</span>
             <span>單圈</span>
+            <span class="col-gap">單圈秒差</span>
             <span>累計</span>
+            <span class="col-gap">總秒差</span>
           </div>
           <div id="timingCards" class="p3-cards"></div>
         </div>
 
-        <!-- 控制區：直式在下方，橫式在右下角 -->
         <aside class="p3-control-panel">
           <div id="queueBanner" class="queue-banner">
             <div class="queue-title">
@@ -991,7 +1086,6 @@
   <script>
     const STORAGE_KEY = 'tt_live_timing_state_v1';
 
-    // 應用狀態
     let state = {
       currentPage: 1,
       config: {
@@ -1003,11 +1097,9 @@
         count: 18,
         distanceKm: ''
       },
-      // athletes: [{ id, order, startSec (秒數 0~86399), noc, name, timestamps: [ms, ...] }]
       athletes: [],
-      // pendingQueue: [ms, ...] (FIFO)
+      targetAthleteId: null,
       pendingQueue: [],
-      // historyStack: [{ type: 'RECORD' | 'ASSIGN' | 'REMOVE_QUEUE', ... }]
       historyStack: [],
       scannedRoster: null
     };
@@ -1070,6 +1162,25 @@
       return `${pad2(min)}:${pad2(sec)}.${tenths}`;
     }
 
+    function formatGap(diffMs) {
+      if (diffMs == null) return { text: '--', cls: 'empty' };
+      const roundedTenths = Math.round(diffMs / 100);
+      if (roundedTenths === 0) return { text: '0.0', cls: '' };
+
+      const sign = roundedTenths > 0 ? '+' : '-';
+      const cls = roundedTenths > 0 ? 'gap-slower' : 'gap-faster';
+      const absTenths = Math.abs(roundedTenths);
+      const tenths = absTenths % 10;
+      const totalSec = Math.floor(absTenths / 10);
+      const sec = totalSec % 60;
+      const totalMin = Math.floor(totalSec / 60);
+
+      if (totalMin > 0) {
+        return { text: `${sign}${totalMin}:${pad2(sec)}.${tenths}`, cls };
+      }
+      return { text: `${sign}${sec}.${tenths}`, cls };
+    }
+
     function showToast(msg) {
       const el = document.getElementById('toast');
       el.textContent = msg;
@@ -1081,9 +1192,7 @@
     function saveState() {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      } catch (e) {
-        // 忽略無痕模式或容量錯誤
-      }
+      } catch (e) {}
     }
 
     function loadState() {
@@ -1170,7 +1279,6 @@
       const nocRegex = /\b([A-Z]{3})\b/g;
       const ignoreNoc = new Set(['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC', 'OCA', 'UCI', 'NOC', 'DOB', 'FNL', 'PDF']);
 
-      // 嘗試擷取圈數與單圈距離 (例如 7.9km x 4 laps)
       const configMatch = text.match(/(\d+(?:\.\d+)?)\s*km\s*[x×]\s*(\d+)\s*lap/i);
       let detectedDist = null;
       let detectedLaps = null;
@@ -1182,7 +1290,6 @@
       for (const line of lines) {
         const tm = line.match(timeRegex);
         if (!tm) continue;
-        // 排除報表建立時間 (例如 Report Created ... 8:31)
         if (/report|created|start\s*time/i.test(line)) continue;
 
         const hh = parseInt(tm[1], 10);
@@ -1190,7 +1297,6 @@
         const ss = tm[3] ? parseInt(tm[3], 10) : 0;
         const startSec = hh * 3600 + mm * 60 + ss;
 
-        // 取出時間之後的文字嘗試抓 NOC 與姓名
         let rest = line.slice(tm.index + tm[0].length).trim();
         let noc = '';
         const nocMatches = [...rest.matchAll(nocRegex)].map(m => m[1]).filter(c => !ignoreNoc.has(c));
@@ -1199,14 +1305,9 @@
           const nocIdx = rest.indexOf(noc);
           rest = rest.slice(0, nocIdx).trim();
         }
-        // 移除開頭號碼布數字
         rest = rest.replace(/^\d+\s*/, '').replace(/\d+\s*$/, '').trim();
 
-        parsedAthletes.push({
-          startSec,
-          noc,
-          name: rest
-        });
+        parsedAthletes.push({ startSec, noc, name: rest });
       }
 
       return { parsedAthletes, detectedDist, detectedLaps };
@@ -1237,7 +1338,6 @@
           return;
         }
 
-        // 依辨識結果更新第一頁設定
         const firstSec = parsedAthletes[0].startSec;
         const h24 = Math.floor(firstSec / 3600);
         const m = Math.floor((firstSec % 3600) / 60);
@@ -1306,7 +1406,12 @@
         }
       }
       state.athletes = nextAthletes;
-      state.scannedRoster = null; // 帶入後清空，避免後續蓋掉手動編輯
+      state.scannedRoster = null;
+
+      // 若人數縮減導致原本指定的基準選手不存在，則清除指定
+      if (state.targetAthleteId && !state.athletes.some(a => a.id === state.targetAthleteId)) {
+        state.targetAthleteId = null;
+      }
     }
 
     function renderPage2() {
@@ -1344,9 +1449,22 @@
           saveState();
         });
 
+        const isSelected = state.targetAthleteId === ath.id;
+        const targetBtn = document.createElement('button');
+        targetBtn.type = 'button';
+        targetBtn.className = `roster-target-btn ${isSelected ? 'selected' : ''}`;
+        targetBtn.textContent = isSelected ? '★' : '☆';
+        targetBtn.title = isSelected ? '取消指定基準選手' : '指定為秒差基準選手';
+        targetBtn.addEventListener('click', () => {
+          state.targetAthleteId = isSelected ? null : ath.id;
+          saveState();
+          renderPage2();
+        });
+
         row.appendChild(timeBtn);
         row.appendChild(nocInput);
         row.appendChild(nameInput);
+        row.appendChild(targetBtn);
         listEl.appendChild(row);
       });
     }
@@ -1390,15 +1508,12 @@
       return state.athletes
         .map(ath => ({ ath, stats: getAthleteStats(ath) }))
         .sort((a, b) => {
-          // 1. 完成圈數多的在上方
           if (b.stats.lapsDone !== a.stats.lapsDone) {
             return b.stats.lapsDone - a.stats.lapsDone;
           }
-          // 2. 同圈數（>0）比累計時間短的在上方
           if (a.stats.lapsDone > 0) {
             return a.stats.totalMs - b.stats.totalMs;
           }
-          // 3. 皆為 0 圈則依出發順序由上而下
           return a.ath.order - b.ath.order;
         });
     }
@@ -1442,11 +1557,18 @@
     }
 
     function renderPage3() {
+      const listPanel = document.getElementById('p3ListPanel');
       const cardsEl = document.getElementById('timingCards');
       const sorted = getSortedAthletes();
       const targetLaps = state.config.laps;
       const hasPending = state.pendingQueue.length > 0;
 
+      const targetObj = state.targetAthleteId
+        ? sorted.find(item => item.ath.id === state.targetAthleteId)
+        : null;
+      const hasTarget = Boolean(targetObj);
+
+      listPanel.classList.toggle('has-target', hasTarget);
       document.getElementById('btnUndo').disabled = state.historyStack.length === 0;
       renderQueue();
 
@@ -1456,6 +1578,7 @@
       sorted.forEach(({ ath, stats }) => {
         const isZero = stats.lapsDone === 0;
         const isFinished = stats.lapsDone >= targetLaps;
+        const isTarget = hasTarget && ath.id === targetObj.ath.id;
         if (!isZero) currentRank++;
 
         const card = document.createElement('div');
@@ -1463,6 +1586,7 @@
           'athlete-card',
           isZero ? 'dimmed' : '',
           isFinished ? 'finished' : '',
+          isTarget ? 'is-target' : '',
           hasPending && !isFinished ? 'selectable' : ''
         ].join(' ').trim();
 
@@ -1475,19 +1599,47 @@
           : isZero
             ? 'lap-badge zero'
             : 'lap-badge';
-        const lapText = isFinished ? `${stats.lapsDone}圈 完` : `${stats.lapsDone}圈`;
+        const lapText = isFinished ? `${stats.lapsDone}完` : `${stats.lapsDone}圈`;
+
+        // 計算單圈秒差與總秒差
+        let lapGapHtml = '';
+        let totalGapHtml = '';
+        if (hasTarget) {
+          if (isTarget) {
+            lapGapHtml = `<div class="time-cell col-gap gap-base">基準</div>`;
+            totalGapHtml = `<div class="time-cell col-gap gap-base">基準</div>`;
+          } else {
+            // 單圈秒差：雙方皆有完成圈數即比較最新單圈
+            const lapDiff =
+              stats.lastLapMs != null && targetObj.stats.lastLapMs != null
+                ? stats.lastLapMs - targetObj.stats.lastLapMs
+                : null;
+            const lapGap = formatGap(lapDiff);
+            lapGapHtml = `<div class="time-cell col-gap ${lapGap.cls}">${lapGap.text}</div>`;
+
+            // 總秒差：僅在完成圈數相同（且 > 0）時才比較
+            const totalDiff =
+              stats.lapsDone > 0 && stats.lapsDone === targetObj.stats.lapsDone
+                ? stats.totalMs - targetObj.stats.totalMs
+                : null;
+            const totalGap = formatGap(totalDiff);
+            totalGapHtml = `<div class="time-cell col-gap ${totalGap.cls}">${totalGap.text}</div>`;
+          }
+        }
 
         card.innerHTML = `
           <div class="${rankClass}">${rankText}</div>
           <div class="name-cell">
             ${ath.noc ? `<div class="noc-tag">${ath.noc}</div>` : ''}
-            <div class="athlete-name">${displayName}</div>
+            <div class="athlete-name">${isTarget ? '★ ' : ''}${displayName}</div>
           </div>
           <div class="lap-cell">
             <span class="${lapBadgeClass}">${lapText}</span>
           </div>
           <div class="time-cell ${isZero ? 'empty' : ''}">${formatDuration(stats.lastLapMs)}</div>
+          ${lapGapHtml}
           <div class="time-cell total ${isZero ? 'empty' : ''}">${formatDuration(stats.totalMs)}</div>
+          ${totalGapHtml}
         `;
 
         card.addEventListener('click', () => assignPendingTimeToAthlete(ath.id));
@@ -1526,7 +1678,6 @@
         return;
       }
 
-      // 取出佇列最前面的時間分配給該選手
       const assignedTs = state.pendingQueue.shift();
       ath.timestamps.push(assignedTs);
       state.historyStack.push({
@@ -1544,12 +1695,10 @@
       const last = state.historyStack.pop();
 
       if (last.type === 'RECORD') {
-        // 移除最後一筆尚未分配的紀錄
         const idx = state.pendingQueue.lastIndexOf(last.timestamp);
         if (idx !== -1) state.pendingQueue.splice(idx, 1);
         showToast('已復原：取消剛紀錄的時間');
       } else if (last.type === 'ASSIGN') {
-        // 退回該選手最後一圈，並把時間放回待分配佇列最前面
         const ath = state.athletes.find(a => a.id === last.athleteId);
         if (ath && ath.timestamps.length > 0) {
           ath.timestamps.pop();
@@ -1565,7 +1714,6 @@
       saveState();
     }
 
-    // ===== 即時時鐘 =====
     function startLiveClock() {
       const clockEl = document.getElementById('liveClock');
       function tick() {
@@ -1575,9 +1723,7 @@
       setInterval(tick, 200);
     }
 
-    // ===== 綁定事件 =====
     function bindEvents() {
-      // 第一頁
       document.getElementById('btnScanStartList').addEventListener('click', () => {
         document.getElementById('scanFileInput').click();
       });
@@ -1593,7 +1739,6 @@
         showPage(2);
       });
 
-      // 第二頁
       document.getElementById('btnBackToPage1').addEventListener('click', () => {
         showPage(1);
       });
@@ -1602,7 +1747,6 @@
         showPage(3);
       });
 
-      // 時間微調 Modal
       document.getElementById('btnCancelTimeEdit').addEventListener('click', closeTimeEditModal);
       document.getElementById('btnSaveTimeEdit').addEventListener('click', () => {
         const ath = state.athletes.find(a => a.id === editingAthleteId);
@@ -1618,7 +1762,6 @@
         closeTimeEditModal();
       });
 
-      // 第三頁
       document.getElementById('btnRecordTime').addEventListener('click', recordTimestamp);
       document.getElementById('btnUndo').addEventListener('click', undoLastAction);
 
@@ -1638,6 +1781,7 @@
       document.getElementById('btnFinishResetAll').addEventListener('click', () => {
         document.getElementById('finishModal').classList.remove('open');
         state.athletes = [];
+        state.targetAthleteId = null;
         state.pendingQueue = [];
         state.historyStack = [];
         state.scannedRoster = null;
@@ -1647,7 +1791,6 @@
       });
     }
 
-    // ===== 啟動與註冊 PWA Service Worker =====
     initSelectOptions();
     loadState();
     syncPage1InputsFromState();
